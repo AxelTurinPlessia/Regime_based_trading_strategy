@@ -99,3 +99,5 @@ print(f"Final cumulative asset return:    {out['cum_asset'].iloc[-1]:.4f}")
 print(f"Final cumulative strategy return: {out['cum_strategy'].iloc[-1]:.4f}")
 print(f"Sharpe ratio (annualized):        {sharpe:.4f}")
 print(f"Max drawdown:                     {max_drawdown:.4f}")
+
+#test
