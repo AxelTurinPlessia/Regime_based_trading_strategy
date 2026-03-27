@@ -1,0 +1,25 @@
+# Core numerical stack
+numpy==2.1.3
+pandas==2.2.3
+
+# Data access
+yfinance==0.2.66
+
+# LLM / sentiment-analysis stack
+torch==2.9.0
+transformers
+accelerate
+datasets
+peft
+
+# Quantized inference for the sentiment notebook
+# This is typically only usable in a compatible CUDA environment.
+bitsandbytes
+
+# Plotting used in the notebook
+plotly==5.24.1
+matplotlib==3.10.0
+tqdm==4.67.1
+
+# Notebook runtime
+notebook==7.3.2
