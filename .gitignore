@@ -1,0 +1,25 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Python caches / environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# Generated per-ticker datasets
+data/large_caps/
+data/small_caps/
+
+# Legacy raw bulk exports from dataset_maker.py
+voo_prices_volumes.csv
+vb_prices_volumes.csv
+
+# Local ad hoc exports
+*.tmp

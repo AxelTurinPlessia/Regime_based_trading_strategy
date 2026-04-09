@@ -3,6 +3,7 @@ import yfinance as yf
 import requests
 import time
 from io import StringIO
+from pathlib import Path
 
 HEADERS = {
     "User-Agent": (
@@ -11,6 +12,10 @@ HEADERS = {
         "Chrome/122.0.0.0 Safari/537.36"
     )
 }
+
+DATA_DIR = Path("data")
+LARGE_CAPS_DIR = DATA_DIR / "large_caps"
+SMALL_CAPS_DIR = DATA_DIR / "small_caps"
 
 # -----------------------------------
 # 1. Helpers to fetch HTML safely
@@ -55,53 +60,76 @@ def get_russell2000_tickers():
 # 3. Download data
 # -----------------------------------
 
-def download_prices_and_volumes(tickers, start="2016-01-01", end=None):
-    all_rows = []
+def extract_close_and_volume(df):
+    if isinstance(df.columns, pd.MultiIndex):
+        flattened = {}
+        for column in df.columns:
+            for level in column:
+                if level in {"Close", "Volume"}:
+                    flattened[level] = df[column]
+                    break
+        df = pd.DataFrame(flattened, index=df.index)
+
+    missing_columns = [column for column in ("Close", "Volume") if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    output = df[["Close", "Volume"]].copy()
+    output = output.reset_index()
+    output = output[["Date", "Close", "Volume"]]
+    return output
+
+
+def safe_ticker_filename(ticker):
+    return ticker.replace("/", "-")
+
+
+def download_ticker_prices_and_volumes(ticker, start="2010-01-01", end=None):
+    df = yf.download(
+        ticker,
+        start=start,
+        end=end,
+        auto_adjust=False,
+        progress=False,
+        threads=False
+    )
+
+    if df.empty:
+        raise ValueError("No data returned.")
+
+    return extract_close_and_volume(df)
+
+
+def download_group_to_folder(tickers, output_dir, start="2010-01-01", end=None):
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    saved_count = 0
+    failed_tickers = []
 
     for i, ticker in enumerate(tickers, start=1):
         try:
             print(f"[{i}/{len(tickers)}] Downloading {ticker} ...")
-            df = yf.download(
+            ticker_data = download_ticker_prices_and_volumes(
                 ticker,
                 start=start,
                 end=end,
-                auto_adjust=False,
-                progress=False,
-                threads=False
             )
-
-            if df.empty:
-                print(f"  -> No data for {ticker}")
-                continue
-
-            # Keep only Close and Volume
-            cols_to_keep = []
-            if "Close" in df.columns:
-                cols_to_keep.append("Close")
-            if "Volume" in df.columns:
-                cols_to_keep.append("Volume")
-
-            if len(cols_to_keep) < 2:
-                print(f"  -> Missing Close/Volume for {ticker}")
-                continue
-
-            tmp = df[cols_to_keep].copy()
-            tmp = tmp.reset_index()
-            tmp["Ticker"] = ticker
-
-            # Reorder columns
-            tmp = tmp[["Date", "Ticker", "Close", "Volume"]]
-            all_rows.append(tmp)
-
+            file_path = output_path / f"{safe_ticker_filename(ticker)}.csv"
+            ticker_data.to_csv(file_path, index=False)
+            print(f"  -> Saved {file_path}")
+            saved_count += 1
             time.sleep(0.1)
-
         except Exception as e:
             print(f"  -> Error for {ticker}: {e}")
+            failed_tickers.append(ticker)
 
-    if not all_rows:
-        raise ValueError("No data downloaded.")
+    if saved_count == 0:
+        raise ValueError(f"No data downloaded for {output_path}.")
 
-    return pd.concat(all_rows, ignore_index=True)
+    if failed_tickers:
+        print(f"\nFailed tickers for {output_path}: {len(failed_tickers)}")
+        print(", ".join(failed_tickers))
 
 # -----------------------------------
 # 4. Main
@@ -118,28 +146,22 @@ def main():
     # -----------------------------
     # Download VOO data
     # -----------------------------
-    print("\nDownloading VOO data...")
-    voo_data = download_prices_and_volumes(
+    print(f"\nDownloading large-cap data to {LARGE_CAPS_DIR} ...")
+    download_group_to_folder(
         voo_tickers,
-        start="2016-01-01"
+        output_dir=LARGE_CAPS_DIR,
+        start="2010-01-01"
     )
-
-    voo_file = "voo_prices_volumes.csv"
-    voo_data.to_csv(voo_file, index=False)
-    print(f"Saved VOO data to {voo_file}")
 
     # -----------------------------
     # Download VB data
     # -----------------------------
-    print("\nDownloading VB data...")
-    vb_data = download_prices_and_volumes(
+    print(f"\nDownloading small-cap data to {SMALL_CAPS_DIR} ...")
+    download_group_to_folder(
         vb_tickers,
-        start="2016-01-01"
+        output_dir=SMALL_CAPS_DIR,
+        start="2010-01-01"
     )
-
-    vb_file = "vb_prices_volumes.csv"
-    vb_data.to_csv(vb_file, index=False)
-    print(f"Saved VB data to {vb_file}")
 
 if __name__ == "__main__":
     main()
