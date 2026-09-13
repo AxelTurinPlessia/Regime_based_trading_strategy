@@ -57,7 +57,17 @@ def momentum_sma_crossover(
     fast_window: int = 20,
     slow_window: int = 50,
     use_log_returns: bool = False,
+    allow_short: bool = True,
 ) -> pd.DataFrame:
+    """
+    Simple moving-average crossover.
+
+    With `allow_short=True` (the default, and the historical behaviour) the rule is long when
+    the fast average is above the slow one and SHORT when it is below. This is worth stating
+    explicitly because the first draft of the accompanying paper described this sleeve as a
+    "buy-and-hold", which it is not. Pass `allow_short=False` for the long/flat version that
+    the paper's prose actually describes.
+    """
     df = pd.DataFrame({"price": pd.Series(price)}).copy()
     df["price"] = pd.to_numeric(df["price"], errors="coerce")
     df = df.dropna(subset=["price"]).copy()
@@ -74,7 +84,7 @@ def momentum_sma_crossover(
         df["fast_ma"] > df["slow_ma"],
         df["fast_ma"] < df["slow_ma"],
     ]
-    choices = [1, -1]
+    choices = [1, -1 if allow_short else 0]
     df["position"] = np.select(conditions, choices, default=0)
     df.loc[df["slow_ma"].isna(), "position"] = 0
 
@@ -82,4 +92,3 @@ def momentum_sma_crossover(
     df["cum_asset"] = (1 + df["r"].fillna(0)).cumprod()
     df["cum_strategy"] = (1 + df["strategy_ret"].fillna(0)).cumprod()
     return df
-

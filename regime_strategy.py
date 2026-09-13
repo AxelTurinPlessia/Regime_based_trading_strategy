@@ -89,6 +89,9 @@ def build_strategy_leg_table(
     return strategy_legs
 
 
+ExposureConvention = Literal["universe", "active"]
+
+
 def run_strategy_for_universe(
     price_panel: pd.DataFrame,
     strategy_name: StrategyName,
@@ -97,9 +100,33 @@ def run_strategy_for_universe(
     mean_reversion_window: int = 5,
     mean_reversion_theta: float = 1.0,
     use_log_returns: bool = False,
+    exposure_convention: ExposureConvention = "universe",
 ) -> dict[str, pd.DataFrame]:
+    """
+    Run a single-sleeve strategy across every column of `price_panel`.
+
+    `exposure_convention` controls how per-asset positions are turned into weights and is
+    the most consequential parameter in this function:
+
+      "universe" (default, and the historical behaviour) divides each position by the number
+          of assets that have DATA on that date. Gross exposure is capped at 100%, but a
+          selective sleeve is left almost entirely in cash: three active positions out of
+          503 available names gives a gross exposure of 0.6%. The generation-one results
+          reported in the paper were produced with this convention and it is retained as the
+          default so those results remain reproducible.
+
+      "active" divides each position by the number of assets that actually HOLD a position
+          on that date, so the sleeve is fully invested whenever it holds anything. This is
+          almost certainly what was intended and it is what any new work should use.
+
+    See section 7.2 of the accompanying paper.
+    """
     if price_panel.empty:
         raise ValueError("price_panel cannot be empty.")
+    if exposure_convention not in ("universe", "active"):
+        raise ValueError(
+            f"exposure_convention must be 'universe' or 'active', got {exposure_convention!r}."
+        )
 
     position_frames: list[pd.Series] = []
     asset_return_frames: list[pd.Series] = []
@@ -135,11 +162,17 @@ def run_strategy_for_universe(
     positions = pd.concat(position_frames, axis=1).sort_index()
     asset_returns = pd.concat(asset_return_frames, axis=1).sort_index()
     strategy_returns = pd.concat(strategy_return_frames, axis=1).sort_index()
-    weights = positions.div(positions.notna().sum(axis=1).replace(0, np.nan), axis=0)
+    if exposure_convention == "active":
+        denominator = positions.abs().gt(0).sum(axis=1)
+    else:
+        denominator = positions.notna().sum(axis=1)
+    weights = positions.div(denominator.replace(0, np.nan), axis=0)
 
     summary = pd.Series(
         {
             "Strategy_Name": strategy_name,
+            "Exposure_Convention": exposure_convention,
+            "Average_Gross_Exposure": float(weights.abs().sum(axis=1).mean()),
             "Assets": len(positions.columns),
             "Start_Date": positions.index.min().date(),
             "End_Date": positions.index.max().date(),
@@ -457,7 +490,10 @@ def build_equal_weight_buy_hold_return(
 ) -> pd.Series:
     if price_panel.empty:
         raise ValueError("price_panel cannot be empty.")
-    return price_panel.sort_index().pct_change().mean(axis=1).rename(name)
+    # fill_method=None matters: the pandas default forward-fills missing prices, which turns
+    # a gap in a ragged panel into a fabricated zero return and then a fabricated jump when
+    # the series resumes. Every other return computation in this module already passes it.
+    return price_panel.sort_index().pct_change(fill_method=None).mean(axis=1).rename(name)
 
 
 def build_equal_weight_universe_price_index(

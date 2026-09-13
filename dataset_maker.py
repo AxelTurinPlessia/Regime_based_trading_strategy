@@ -39,22 +39,49 @@ def get_sp500_tickers():
     tickers = table["Symbol"].astype(str).tolist()
     return [t.replace(".", "-") for t in tickers]
 
+MIN_SMALL_CAP_UNIVERSE = 200
+
+
 def get_russell2000_tickers():
-    """VB proxy = Russell 2000 constituents approximation"""
+    """
+    VB proxy = Russell 2000 constituents approximation.
+
+    WARNING. The Wikipedia article on the Russell 2000 does NOT publish a constituent list,
+    so this function has historically returned either nothing or a handful of tickers scraped
+    out of an unrelated table. That is how the project ended up backtesting a "small-cap
+    universe" of ten names. The size check below now makes that failure loud instead of
+    silent. Point `RUSSELL_2000_SOURCE` at a real constituent source (an ETF holdings file
+    from the iShares IWM or Vanguard VB fund page, or a licensed vendor) before running.
+    """
     url = "https://en.wikipedia.org/wiki/Russell_2000_Index"
     html = get_html(url)
     tables = pd.read_html(StringIO(html))
 
+    tickers = None
     for table in tables:
         cols = [str(c) for c in table.columns]
-        if "Ticker" in cols:
-            tickers = table["Ticker"].astype(str).tolist()
-            return [t.replace(".", "-") for t in tickers]
-        if "Symbol" in cols:
-            tickers = table["Symbol"].astype(str).tolist()
-            return [t.replace(".", "-") for t in tickers]
+        for column in ("Ticker", "Symbol"):
+            if column in cols:
+                tickers = table[column].astype(str).tolist()
+                break
+        if tickers:
+            break
 
-    raise ValueError("Could not find ticker column on Russell 2000 page.")
+    if not tickers:
+        raise ValueError(
+            "Could not find a ticker column on the Russell 2000 Wikipedia page. That page "
+            "does not publish constituents; supply a real holdings file instead."
+        )
+
+    tickers = [t.replace(".", "-") for t in tickers]
+    if len(tickers) < MIN_SMALL_CAP_UNIVERSE:
+        raise ValueError(
+            f"Only {len(tickers)} small-cap tickers were recovered, which is not a universe. "
+            f"Expected at least {MIN_SMALL_CAP_UNIVERSE}. Refusing to build a panel this "
+            "narrow silently: every cross-sectional result computed on it would be a "
+            "statement about a handful of stocks. Supply a real constituent source."
+        )
+    return tickers
 
 # -----------------------------------
 # 3. Download data

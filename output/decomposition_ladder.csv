@@ -1,0 +1,12 @@
+,0
+"(a) original, switch + liquidation",-0.1533305243977321
+"(b) original sleeves, no liquidation",-0.15802869185486623
+"(c) original sleeves, continuous blend",-0.13199864095585778
+"(d) Beta Slider (new sleeves, blend)",0.16736843585394534
+a -> b: dropping the liquidation rule,-0.004698167457134139
+"b -> c: continuous blending, sleeves fixed",0.02603005089900845
+"c -> d: changing the sleeves, mechanism fixed",0.2993670768098031
+total gap (d - a),0.32069896025167743
+SIGNAL VALUE: Beta Slider minus static 50/50,-0.002458165368426357
+SIGNAL VALUE: Beta Slider minus placebo,-0.0018915088647737388
+regime switches (original),12.0
