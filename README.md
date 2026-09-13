@@ -1,4 +1,4 @@
-# Volatility Regime Based Trading Strategies
+# Exploration of Volatility Regime Based Trading Strategies
 
 Code accompanying *An Inquiry Into Volatility Regime Based Trading Strategies* (Peisz, Saugy,
 Turin-Plessia, 2026).
@@ -88,9 +88,6 @@ The three PNGs are the figures the paper includes. The HTML files are explorator
 
 ## Evaluation protocol
 
-The design of the experiment matters more than any individual parameter, so it is worth
-stating plainly what the script does.
-
 **Pre-committed split.** 2010-01-04 to 2016-12-30 is the tuning window; **2017-01-03 to
 2025-12-31 is a holdout** that is not used for parameter selection. Both windows are reported
 so that in-sample to out-of-sample degradation is visible. Only the holdout is a result.
@@ -133,9 +130,6 @@ parameters most worth changing:
 ---
 
 ## Known issues and caveats
-
-These affect how the results should be read. They are documented in the paper and repeated
-here so anyone running the code encounters them early.
 
 **The universe is small and survivorship-selected.** 29 large caps and 12 small caps, both
 lists filtered on market capitalisation as retrieved at construction time. Securities are in
