@@ -1,7 +1,6 @@
 # Exploration of Volatility Regime Based Trading Strategies
 
-Code accompanying *An Inquiry Into Volatility Regime Based Trading Strategies* (Peisz, Saugy,
-Turin-Plessia, 2026).
+Code accompanying [*An Inquiry Into Volatility Regime Based Trading Strategies*](https://tfa-epfl.ch/research/papers/regime_based_strategy_final.pdf) (Peisz, Saugy, Turin-Plessia, 2026).
 
 We estimate a two-state Gaussian hidden Markov model of equity volatility regimes and test
 whether conditioning portfolio construction on its output improves performance. Two
